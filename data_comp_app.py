@@ -43,7 +43,11 @@ def compare_data(df1, df2, key_columns):
                for key in df1.index.intersection(df2.index)
                if not df1.loc[key].equals(df2.loc[key])]
     changed_df = pd.concat(changed) if changed else pd.DataFrame()
-    return added, removed, changed_df
+    # Columns added: present in df2 but not in df1
+    columns_added = [col for col in df2.columns if col not in df1.columns]
+    # Columns removed: present in df1 but not in df2
+    columns_removed = [col for col in df1.columns if col not in df2.columns]
+    return added, removed, changed_df, columns_added, columns_removed
 
 def compare_sql_files(sql1, sql2):
     import difflib
@@ -88,7 +92,7 @@ if st.button("Compare"):
         df2 = pd.read_csv(csv2)
         progress.progress(20, text="Loaded second CSV file.")
         keys = [k.strip() for k in key_columns.split(",")] if key_columns else df1.columns.tolist()
-        added, removed, changed = compare_data(df1, df2, keys)
+        added, removed, changed, columns_added, columns_removed = compare_data(df1, df2, keys)
         progress.progress(40, text="Compared CSV data.")
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -97,6 +101,11 @@ if st.button("Compare"):
                 removed.to_excel(writer, sheet_name='Removed')
                 if not changed.empty:
                     changed.to_excel(writer, sheet_name='Changed')
+                # Write columns added/removed to new sheets
+                if columns_added:
+                    pd.DataFrame({'Columns Added': columns_added}).to_excel(writer, sheet_name='Columns_Added', index=False)
+                if columns_removed:
+                    pd.DataFrame({'Columns Removed': columns_removed}).to_excel(writer, sheet_name='Columns_Removed', index=False)
             sql_overlay_df = None
             if sql1 and sql2:
                 sql_overlay_df = compare_sql_files(sql1, sql2)
@@ -125,6 +134,10 @@ if st.button("Compare"):
         if added is not None:
             st.write(f"### Added Rows ({len(added)})", added)
             st.write(f"### Removed Rows ({len(removed)})", removed)
+            if columns_added:
+                st.write(f"### Columns Added ({len(columns_added)})", columns_added)
+            if columns_removed:
+                st.write(f"### Columns Removed ({len(columns_removed)})", columns_removed)
             if not changed.empty:
                 st.write("### Changed Rows", changed)
         if sql1 and sql2 and sql_overlay_df is not None and not sql_overlay_df.empty:
