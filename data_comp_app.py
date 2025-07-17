@@ -123,8 +123,8 @@ if st.button("Compare"):
         progress.progress(100, text="Done!")
         st.download_button("Download comparison_results.xlsx", data=output.getvalue(), file_name="comparison_results.xlsx")
         if added is not None:
-            st.write("### Added Rows", added)
-            st.write("### Removed Rows", removed)
+            st.write(f"### Added Rows ({len(added)})", added)
+            st.write(f"### Removed Rows ({len(removed)})", removed)
             if not changed.empty:
                 st.write("### Changed Rows", changed)
         if sql1 and sql2 and sql_overlay_df is not None and not sql_overlay_df.empty:
